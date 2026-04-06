@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 st.title("📊 PBTD 카카오모먼트 주간 분석")
-st.caption("W1 (3/23~3/29) vs W2 (3/30~4/5) | Cost Payback = Cost Channel ÷ 1.763")
+st.caption("W1 (3/23~3/29) vs W2 (3/30~4/5) | ROAS = 에어브릿지 ROAS × 1.763 (보정계수)")
 
 # ──────────────────────────────────────────────
 # 캠페인 요약 데이터
@@ -28,8 +28,7 @@ RAW = {
     "주차": ["W1", "W2", "W1", "W2", "W1", "W2", "W1", "W2"],
     "Impressions": [8_909_505, 11_116_000, 1_618_645, 2_892_869, 1_494_490, 850_437, 12_022_640, 14_859_306],
     "Clicks": [61_178, 65_497, 11_900, 12_653, 26_972, 15_252, 100_050, 93_402],
-    "Cost (Channel)": [21_690_419, 23_643_311, 2_394_221, 2_719_175, 10_444_799, 5_334_921, 34_529_439, 31_697_407],
-    "Cost (Payback)": [12_303_130, 13_410_840, 1_358_038, 1_542_357, 5_924_446, 3_026_047, 19_585_615, 17_979_244],
+    "비용": [21_690_419, 23_643_311, 2_394_221, 2_719_175, 10_444_799, 5_334_921, 34_529_439, 31_697_407],
     "회원가입": [7, 16, 251, 427, 5, 3, 263, 446],
     "구매완료": [1_127, 1_449, 107, 214, 509, 295, 1_743, 1_958],
     "구매액": [66_387_990, 63_758_221, 4_914_681, 7_037_535, 31_049_160, 14_185_722, 102_351_831, 84_981_478],
@@ -39,6 +38,16 @@ RAW = {
 
 df = pd.DataFrame(RAW)
 df["구매유저 합계"] = df["구매유저(App)"] + df["구매유저(Web)"]
+
+# W2 비용 보정 (에어브릿지 실제 비용 기준)
+# W1: 34,529,439원 (DB 일치), W2: 32,374,233원 (DB 31,697,407 → 에어브릿지 32,374,233)
+W2_DB_COST = 31_697_407
+W2_AIRBRIDGE_COST = 32_374_233
+W2_RATIO = W2_AIRBRIDGE_COST / W2_DB_COST
+
+df.loc[df["주차"] == "W2", "비용"] = (df.loc[df["주차"] == "W2", "비용"] * W2_RATIO).round(0).astype(int)
+# kakao 합계 W2는 정확히 에어브릿지 값으로 설정
+df.loc[(df["주차"] == "W2") & (df["캠페인"] == "kakao 합계"), "비용"] = W2_AIRBRIDGE_COST
 
 # ──────────────────────────────────────────────
 # 광고그룹별 데이터
@@ -113,28 +122,34 @@ ADGROUP_RAW = [
 ]
 
 adf = pd.DataFrame(ADGROUP_RAW)
-adf["Cost (Payback)"] = (adf["Cost (Channel)"] / 1.763).round(0).astype(int)
+adf.rename(columns={"Cost (Channel)": "비용"}, inplace=True)
 adf["구매유저 합계"] = adf["구매유저(App)"] + adf["구매유저(Web)"]
 
-# 성과 지표 계산 (0 나누기 방지)
+# W2 비용 보정 (에어브릿지 기준)
+adf.loc[adf["주차"] == "W2", "비용"] = (adf.loc[adf["주차"] == "W2", "비용"] * W2_RATIO).round(0).astype(int)
+
+# 보정계수
+ROAS_FACTOR = 1.763
+
+# 광고그룹 성과 지표 (비용 = 실제 집행 비용, ROAS = 에어브릿지 ROAS × 1.763)
 adf["CTR"] = adf.apply(lambda r: r["Clicks"] / r["Impressions"] * 100 if r["Impressions"] > 0 else 0, axis=1)
-adf["CPC"] = adf.apply(lambda r: r["Cost (Payback)"] / r["Clicks"] if r["Clicks"] > 0 else 0, axis=1)
+adf["CPC"] = adf.apply(lambda r: r["비용"] / r["Clicks"] if r["Clicks"] > 0 else 0, axis=1)
 adf["가입 CVR"] = adf.apply(lambda r: r["회원가입"] / r["Clicks"] * 100 if r["Clicks"] > 0 else 0, axis=1)
-adf["가입 CPA"] = adf.apply(lambda r: r["Cost (Payback)"] / r["회원가입"] if r["회원가입"] > 0 else 0, axis=1)
+adf["가입 CPA"] = adf.apply(lambda r: r["비용"] / r["회원가입"] if r["회원가입"] > 0 else 0, axis=1)
 adf["구매 CVR"] = adf.apply(lambda r: r["구매완료"] / r["Clicks"] * 100 if r["Clicks"] > 0 else 0, axis=1)
-adf["구매 CPA"] = adf.apply(lambda r: r["Cost (Payback)"] / r["구매완료"] if r["구매완료"] > 0 else 0, axis=1)
-adf["ROAS"] = adf.apply(lambda r: r["구매액"] / r["Cost (Payback)"] * 100 if r["Cost (Payback)"] > 0 else 0, axis=1)
+adf["구매 CPA"] = adf.apply(lambda r: r["비용"] / r["구매완료"] if r["구매완료"] > 0 else 0, axis=1)
+adf["ROAS"] = adf.apply(lambda r: r["구매액"] / r["비용"] * ROAS_FACTOR * 100 if r["비용"] > 0 else 0, axis=1)
 adf["ARPPU"] = adf.apply(lambda r: r["구매액"] / r["구매유저 합계"] if r["구매유저 합계"] > 0 else 0, axis=1)
 
-# 캠페인 요약 지표 계산
+# 캠페인 요약 지표 (비용 = 실제 집행 비용, ROAS = 에어브릿지 ROAS × 1.763)
 df["CTR"] = df["Clicks"] / df["Impressions"] * 100
-df["CPC"] = df["Cost (Payback)"] / df["Clicks"]
+df["CPC"] = df["비용"] / df["Clicks"]
 df["가입 CVR"] = df["회원가입"] / df["Clicks"] * 100
-df["가입 CPA"] = df["Cost (Payback)"] / df["회원가입"]
+df["가입 CPA"] = df["비용"] / df["회원가입"]
 df["가입→구매 CVR"] = df["구매완료"] / df["회원가입"] * 100
 df["구매 CVR"] = df["구매완료"] / df["Clicks"] * 100
-df["구매 CPA"] = df["Cost (Payback)"] / df["구매완료"]
-df["ROAS"] = df["구매액"] / df["Cost (Payback)"] * 100
+df["구매 CPA"] = df["비용"] / df["구매완료"]
+df["ROAS"] = df["구매액"] / df["비용"] * ROAS_FACTOR * 100
 df["ARPPU"] = df["구매액"] / df["구매유저 합계"]
 
 CAMPAIGNS = ["bizboard-retarget", "bizboard-ua", "display-retarget"]
@@ -199,7 +214,7 @@ w2 = total[total["주차"] == "W2"].iloc[0]
 
 kpi_cols = st.columns(6)
 kpis = [
-    ("Cost (Payback)", w1["Cost (Payback)"], w2["Cost (Payback)"], "won"),
+    ("비용", w1["비용"], w2["비용"], "won"),
     ("구매완료", w1["구매완료"], w2["구매완료"], "int"),
     ("구매액", w1["구매액"], w2["구매액"], "won"),
     ("ROAS", w1["ROAS"], w2["ROAS"], "pct"),
@@ -213,7 +228,7 @@ for col, (label, v1, v2, ft) in zip(kpi_cols, kpis):
             label=label,
             value=fmt_num(v2, ft),
             delta=f"{(v2 - v1) / v1 * 100:+.1f}%" if v1 != 0 else "N/A",
-            delta_color="normal" if label not in ("구매 CPA", "Cost (Payback)") else "inverse",
+            delta_color="normal" if label not in ("구매 CPA", "비용") else "inverse",
         )
 
 # ──────────────────────────────────────────────
@@ -317,7 +332,7 @@ with tab2:
                 text=[f"{v:,.0f}원" for v in camp_df["가입 CPA"]],
                 textposition="outside",
             ))
-        fig.update_layout(title="가입 CPA (Cost Payback / 회원가입)", yaxis_title="원", barmode="group", height=400)
+        fig.update_layout(title="가입 CPA (비용 / 회원가입)", yaxis_title="원", barmode="group", height=400)
         apply_chart_margin(fig)
         st.plotly_chart(fig, use_container_width=True)
 
@@ -404,7 +419,7 @@ with tab4:
                 text=[f"{v:,.0f}원" for v in camp_df["구매 CPA"]],
                 textposition="outside",
             ))
-        fig.update_layout(title="구매 CPA (Cost Payback / 구매완료)", yaxis_title="원", barmode="group", height=400)
+        fig.update_layout(title="구매 CPA (비용 / 구매완료)", yaxis_title="원", barmode="group", height=400)
         apply_chart_margin(fig)
         st.plotly_chart(fig, use_container_width=True)
 
@@ -421,7 +436,7 @@ with tab4:
                 textposition="outside",
             ))
         fig.add_hline(y=100, line_dash="dash", line_color="red", annotation_text="손익분기 100%")
-        fig.update_layout(title="ROAS (구매액 / Cost Payback)", yaxis_title="%", barmode="group", height=400)
+        fig.update_layout(title="ROAS (에어브릿지 ROAS × 1.763)", yaxis_title="%", barmode="group", height=400)
         apply_chart_margin(fig)
         st.plotly_chart(fig, use_container_width=True)
 
@@ -439,7 +454,7 @@ with tab4:
         apply_chart_margin(fig)
         st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("#### 구매액 vs Cost (Payback)")
+    st.markdown("#### 구매액 vs 비용")
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     for camp in CAMPAIGNS:
         camp_df = df[df["캠페인"] == camp]
@@ -449,12 +464,12 @@ with tab4:
         ), secondary_y=False)
         fig.add_trace(go.Scatter(
             name=f"{camp} Cost", x=[f"{camp}<br>{w}" for w in camp_df["주차"]],
-            y=camp_df["Cost (Payback)"].values, mode="markers+lines",
+            y=camp_df["비용"].values, mode="markers+lines",
             marker=dict(size=10, color=COLORS[camp]), line=dict(dash="dot"),
         ), secondary_y=True)
-    fig.update_layout(title="캠페인별 구매액(막대) vs Cost Payback(점선)", height=450, barmode="group")
+    fig.update_layout(title="캠페인별 구매액(막대) vs 비용(점선)", height=450, barmode="group")
     fig.update_yaxes(title_text="구매액 (원)", secondary_y=False)
-    fig.update_yaxes(title_text="Cost Payback (원)", secondary_y=True)
+    fig.update_yaxes(title_text="비용 (원)", secondary_y=True)
     fig.update_layout(margin=CHART_MARGIN)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -562,14 +577,14 @@ with tab5:
     else:  # 비용 & 구매액
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("#### 광고그룹별 Cost (Payback)")
+            st.markdown("#### 광고그룹별 비용")
             fig = go.Figure()
             for week, color in WEEK_COLORS.items():
-                week_data = camp_adf[(camp_adf["주차"] == week) & (camp_adf["Cost (Payback)"] > 0)].sort_values("Cost (Payback)", ascending=True)
+                week_data = camp_adf[(camp_adf["주차"] == week) & (camp_adf["비용"] > 0)].sort_values("비용", ascending=True)
                 fig.add_trace(go.Bar(
-                    name=week, y=week_data["광고그룹"], x=week_data["Cost (Payback)"],
+                    name=week, y=week_data["광고그룹"], x=week_data["비용"],
                     orientation="h", marker_color=color,
-                    text=[f"{v/10000:,.0f}만원" for v in week_data["Cost (Payback)"]],
+                    text=[f"{v/10000:,.0f}만원" for v in week_data["비용"]],
                     textposition="outside",
                 ))
             fig.update_layout(barmode="group", height=max(400, len(adgroups) * 40),
@@ -597,14 +612,14 @@ with tab5:
     st.markdown("---")
     st.markdown("#### 상세 데이터 테이블")
 
-    show_df = camp_adf[["광고그룹", "주차", "Impressions", "Clicks", "Cost (Payback)",
+    show_df = camp_adf[["광고그룹", "주차", "Impressions", "Clicks", "비용",
                          "회원가입", "구매완료", "구매액", "CTR", "CPC", "구매 CVR", "구매 CPA", "ROAS", "ARPPU"]].copy()
 
     # 포맷팅
     fmt_show = show_df.copy()
     fmt_show["Impressions"] = fmt_show["Impressions"].apply(lambda x: f"{x:,.0f}")
     fmt_show["Clicks"] = fmt_show["Clicks"].apply(lambda x: f"{x:,.0f}")
-    fmt_show["Cost (Payback)"] = fmt_show["Cost (Payback)"].apply(lambda x: f"{x:,.0f}원")
+    fmt_show["비용"] = fmt_show["비용"].apply(lambda x: f"{x:,.0f}원")
     fmt_show["회원가입"] = fmt_show["회원가입"].apply(lambda x: f"{x:,.0f}")
     fmt_show["구매완료"] = fmt_show["구매완료"].apply(lambda x: f"{x:,.0f}")
     fmt_show["구매액"] = fmt_show["구매액"].apply(lambda x: f"{x:,.0f}원")
@@ -630,7 +645,7 @@ with tab5:
         w1r = w1_data.iloc[0]
         w2r = w2_data.iloc[0]
         row = {"광고그룹": ag}
-        for m in ["Impressions", "Clicks", "Cost (Payback)", "구매완료", "구매액", "구매 CVR", "구매 CPA", "ROAS", "ARPPU"]:
+        for m in ["Impressions", "Clicks", "비용", "구매완료", "구매액", "구매 CVR", "구매 CPA", "ROAS", "ARPPU"]:
             pct = safe_pct_change(w1r[m], w2r[m])
             row[m] = f"{pct:+.1f}%" if pct is not None else "-"
         change_rows.append(row)
@@ -643,7 +658,7 @@ with tab6:
     st.subheader("캠페인 요약 데이터")
 
     display_df = df.copy()
-    won_cols = ["Cost (Channel)", "Cost (Payback)", "구매액", "가입 CPA", "구매 CPA", "ARPPU", "CPC"]
+    won_cols = ["비용", "구매액", "가입 CPA", "구매 CPA", "ARPPU", "CPC"]
     pct_cols = ["CTR", "가입 CVR", "가입→구매 CVR", "구매 CVR", "ROAS"]
 
     for c in won_cols:
@@ -658,7 +673,7 @@ with tab6:
     st.markdown("#### W1 → W2 증감률")
     change_data = []
     metrics = [
-        ("Impressions", "int"), ("Clicks", "int"), ("Cost (Payback)", "won"),
+        ("Impressions", "int"), ("Clicks", "int"), ("비용", "won"),
         ("회원가입", "int"), ("구매완료", "int"), ("구매액", "won"),
         ("구매 CVR", "pct"), ("구매 CPA", "won"), ("ROAS", "pct"), ("ARPPU", "won"),
     ]
