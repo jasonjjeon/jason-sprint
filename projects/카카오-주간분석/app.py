@@ -213,30 +213,54 @@ with tab2:
 
 # ──────────────── 가입→구매 탭 ────────────────
 with tab3:
-    st.subheader("가입→구매 전환율")
+    st.subheader("가입→구매 전환율 (ua 캠페인)")
+    st.caption("리타겟팅 캠페인은 기존 유저 대상이라 가입이 극소수 → CVR이 비정상적으로 높아 ua만 표시합니다.")
 
-    # ua 캠페인만 의미있으므로 별도 표시
+    ua_df = df[df["캠페인"] == "bizboard-ua"]
+    ua_w1 = ua_df[ua_df["주차"] == "W1"].iloc[0]
+    ua_w2 = ua_df[ua_df["주차"] == "W2"].iloc[0]
+
+    # KPI 카드
+    kpi1, kpi2, kpi3 = st.columns(3)
+    with kpi1:
+        st.metric("가입→구매 CVR (W2)", f"{ua_w2['가입→구매 CVR']:.1f}%",
+                  delta=f"{ua_w2['가입→구매 CVR'] - ua_w1['가입→구매 CVR']:+.1f}%p")
+    with kpi2:
+        st.metric("회원가입 (W2)", f"{int(ua_w2['회원가입']):,}명",
+                  delta=f"{(ua_w2['회원가입'] - ua_w1['회원가입']) / ua_w1['회원가입'] * 100:+.1f}%")
+    with kpi3:
+        st.metric("구매완료 (W2)", f"{int(ua_w2['구매완료']):,}건",
+                  delta=f"{(ua_w2['구매완료'] - ua_w1['구매완료']) / ua_w1['구매완료'] * 100:+.1f}%")
+
     col1, col2 = st.columns(2)
 
     with col1:
-        ua_df = df[df["캠페인"] == "bizboard-ua"]
         fig = go.Figure()
         fig.add_trace(go.Bar(
             x=ua_df["주차"], y=ua_df["가입→구매 CVR"],
             marker_color=["#5B8FF9", "#FF6B6B"],
             text=[f"{v:.1f}%" for v in ua_df["가입→구매 CVR"]],
             textposition="outside",
+            width=0.4,
         ))
-        fig.update_layout(title="bizboard-ua: 가입→구매 CVR", yaxis_title="%", height=400)
+        fig.update_layout(title="가입→구매 CVR 추이", yaxis_title="%", height=400,
+                         yaxis_range=[0, max(ua_df["가입→구매 CVR"]) * 1.3])
         st.plotly_chart(fig, use_container_width=True)
 
     with col2:
-        st.markdown("#### 전체 캠페인 참고")
-        ref_df = df[df["캠페인"] != "kakao 합계"][["캠페인", "주차", "회원가입", "구매완료", "가입→구매 CVR"]].copy()
-        ref_df["가입→구매 CVR"] = ref_df["가입→구매 CVR"].apply(lambda x: f"{x:.1f}%")
-        st.dataframe(ref_df, use_container_width=True, hide_index=True)
-
-    st.warning("⚠️ retarget 캠페인은 가입 수 대비 구매가 압도적으로 많아 CVR이 1,000%+ 입니다. 해석 시 주의하세요.")
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            name="회원가입", x=ua_df["주차"], y=ua_df["회원가입"],
+            marker_color="#5B8FF9", text=[f"{int(v):,}명" for v in ua_df["회원가입"]],
+            textposition="outside",
+        ))
+        fig.add_trace(go.Bar(
+            name="구매완료", x=ua_df["주차"], y=ua_df["구매완료"],
+            marker_color="#FF6B6B", text=[f"{int(v):,}건" for v in ua_df["구매완료"]],
+            textposition="outside",
+        ))
+        fig.update_layout(title="회원가입 vs 구매완료", yaxis_title="건", barmode="group", height=400)
+        st.plotly_chart(fig, use_container_width=True)
 
 # ──────────────── 구매 탭 ────────────────
 with tab4:
