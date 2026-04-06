@@ -1,0 +1,26 @@
+# 민감 파일
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+
+# OS 파일
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/settings.json
+!.vscode/
+
+# OMC 내부 상태
+.omc/state/
+.omc/sessions/
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/

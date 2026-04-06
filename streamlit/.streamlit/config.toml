@@ -1,0 +1,5 @@
+[bind]
+name = "기본 대시보드"
+
+[server]
+headless = true
