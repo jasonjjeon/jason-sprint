@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>앱그로스 주간 성과 대시보드</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+  :root {
+    --google: #4285F4; --facebook: #1877F2;
+    --w1: #5B8FF9; --w2: #FF6B6B;
+    --bg: #0e1117; --card: #1a1d23; --text: #fafafa; --muted: #8b949e;
+    --green: #2ea043; --red: #f85149; --border: #30363d;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, 'Pretendard', sans-serif; background:var(--bg); color:var(--text); padding:24px; }
+  h1 { font-size:28px; margin-bottom:4px; }
+  .caption { color:var(--muted); font-size:13px; margin-bottom:20px; }
+  .divider { border-top:1px solid var(--border); margin:24px 0; }
+
+  /* Tabs */
+  .tabs { display:flex; gap:4px; border-bottom:2px solid var(--border); margin-bottom:20px; flex-wrap:wrap; }
+  .tab { padding:10px 18px; cursor:pointer; color:var(--muted); font-size:14px; font-weight:500;
+         border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .2s; white-space:nowrap; }
+  .tab:hover { color:var(--text); }
+  .tab.active { color:var(--text); border-bottom-color:var(--w2); }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  /* KPI Cards */
+  .kpi-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+  .kpi { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px; }
+  .kpi-label { font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .kpi-value { font-size:22px; font-weight:700; }
+  .kpi-delta { font-size:12px; margin-top:2px; }
+  .kpi-delta.up { color:var(--green); }
+  .kpi-delta.down { color:var(--red); }
+
+  /* Grid */
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
+  .grid4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
+  @media(max-width:900px) { .grid2,.grid3,.grid4 { grid-template-columns:1fr; } }
+  .chart-box { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px; }
+  .section-title { font-size:16px; font-weight:600; margin:20px 0 12px; }
+  .channel-title { font-size:18px; font-weight:700; margin:16px 0 8px; }
+
+  /* Table */
+  .table-wrap { overflow-x:auto; margin-bottom:20px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th,td { padding:8px 10px; border:1px solid var(--border); text-align:right; white-space:nowrap; }
+  th { background:var(--card); color:var(--muted); font-weight:600; position:sticky; top:0; }
+  td:first-child, th:first-child { text-align:left; }
+  tr:hover td { background:rgba(255,255,255,0.03); }
+  .highlight { font-weight:700; color:#FFD700; }
+
+  /* Insight box */
+  .insight-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+  .insight-box { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px; }
+  .insight-box h3 { font-size:15px; margin-bottom:10px; }
+  .insight-box ul { padding-left:18px; font-size:13px; line-height:1.8; color:var(--muted); }
+  .insight-box li strong { color:var(--text); }
+  @media(max-width:900px) { .insight-grid { grid-template-columns:1fr; } }
+
+  /* View toggle */
+  .view-toggle { display:flex; gap:8px; margin-bottom:16px; }
+  .view-btn { padding:6px 14px; border:1px solid var(--border); border-radius:6px; cursor:pointer;
+              font-size:13px; color:var(--muted); background:transparent; transition:all .2s; }
+  .view-btn.active { background:var(--w2); color:#fff; border-color:var(--w2); }
+</style>
+</head>
+<body>
+
+<h1>📱 앱그로스 주간 성과 대시보드</h1>
+<p class="caption">W1 (3/23~3/29) vs W2 (3/30~4/5) | Google · Facebook 캠페인 비교</p>
+
+<div class="divider"></div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('inflow')">📈 유입</div>
+  <div class="tab" onclick="showTab('signup')">👤 가입</div>
+  <div class="tab" onclick="showTab('s2p')">🔄 가입→구매</div>
+  <div class="tab" onclick="showTab('purchase')">💰 구매</div>
+  <div class="tab" onclick="showTab('install')">📲 설치·앱구매</div>
+  <div class="tab" onclick="showTab('creative')">🎨 메타 소재별</div>
+  <div class="tab" onclick="showTab('compare')">📊 채널 비교</div>
+  <div class="tab" onclick="showTab('insight')">💡 인사이트</div>
+</div>
+
+<!-- ═══════════ KPI SECTION ═══════════ -->
+<div class="channel-title">Google — App promotion-AppInstall-ua-Purchase</div>
+<div class="kpi-row" id="kpi-google"></div>
+<div class="channel-title">Facebook — facebook_da_pr-ua-apppurchase-android-main</div>
+<div class="kpi-row" id="kpi-facebook"></div>
+<div class="divider"></div>
+
+<!-- ═══════════ TAB CONTENTS ═══════════ -->
+<div id="tab-inflow" class="tab-content active">
+  <div class="grid2"><div class="chart-box" id="ch-ctr"></div><div class="chart-box" id="ch-cpc"></div></div>
+  <div class="section-title">노출 & 클릭 추이</div>
+  <div class="grid2"><div class="chart-box" id="ch-imp"></div><div class="chart-box" id="ch-click"></div></div>
+</div>
+
+<div id="tab-signup" class="tab-content">
+  <div class="grid2"><div class="chart-box" id="ch-signup-cvr"></div><div class="chart-box" id="ch-signup-cpa"></div></div>
+  <div class="grid2"><div class="chart-box" id="ch-signup-cnt"></div><div class="chart-box" id="ch-signup-wow"></div></div>
+</div>
+
+<div id="tab-s2p" class="tab-content">
+  <div class="grid2"><div class="chart-box" id="ch-s2p-cvr"></div><div class="chart-box" id="ch-s2p-funnel"></div></div>
+</div>
+
+<div id="tab-purchase" class="tab-content">
+  <div class="grid2"><div class="chart-box" id="ch-pur-cvr"></div><div class="chart-box" id="ch-pur-cpa"></div></div>
+  <div class="grid2"><div class="chart-box" id="ch-pur-roas"></div><div class="chart-box" id="ch-pur-arppu"></div></div>
+  <div class="section-title">구매액 vs Cost</div>
+  <div class="chart-box" id="ch-pur-revcost" style="margin-bottom:20px"></div>
+</div>
+
+<div id="tab-install" class="tab-content">
+  <div class="grid2"><div class="chart-box" id="ch-cpi"></div><div class="chart-box" id="ch-iap-user"></div></div>
+</div>
+
+<div id="tab-creative" class="tab-content">
+  <div class="kpi-row" id="kpi-creative"></div>
+  <div class="grid2"><div class="chart-box" id="ch-cr-rev"></div><div class="chart-box" id="ch-cr-pie"></div></div>
+  <div class="section-title">소재별 CTR · CPC (W1 vs W2)</div>
+  <div class="grid2"><div class="chart-box" id="ch-cr-ctr"></div><div class="chart-box" id="ch-cr-cpc"></div></div>
+  <div class="section-title">소재별 ROAS · CPA (W1 vs W2)</div>
+  <div class="grid2"><div class="chart-box" id="ch-cr-roas"></div><div class="chart-box" id="ch-cr-cpa"></div></div>
+  <div class="section-title">소재별 전환 퍼널 & CVR (W2)</div>
+  <div class="grid2"><div class="chart-box" id="ch-cr-funnel"></div><div class="chart-box" id="ch-cr-cvr"></div></div>
+  <div class="section-title">소재별 ARPPU · CPI (W2)</div>
+  <div class="grid2"><div class="chart-box" id="ch-cr-arppu"></div><div class="chart-box" id="ch-cr-cpi2"></div></div>
+  <div class="section-title">소재별 W2 상세 데이터</div>
+  <div class="table-wrap" id="cr-table"></div>
+</div>
+
+<div id="tab-compare" class="tab-content">
+  <div class="chart-box" id="ch-radar" style="margin-bottom:20px"></div>
+  <div class="section-title">비용 대비 성과 (W1→W2 추이)</div>
+  <div class="chart-box" id="ch-bubble" style="margin-bottom:20px"></div>
+  <div class="section-title">핵심 지표 비교표 (W2)</div>
+  <div class="table-wrap" id="compare-table"></div>
+</div>
+
+<div id="tab-insight" class="tab-content">
+  <div class="insight-grid">
+    <div class="insight-box">
+      <h3>Google — 볼륨 ↑ 효율 ↓</h3>
+      <ul>
+        <li>예산 <strong>+77.5%</strong> 증액 → 노출·클릭 약 2배</li>
+        <li>ROAS 682% → 433% (<strong>-36.5%</strong>)</li>
+        <li>구매 CPA 8,322원 → 13,026원 (<strong>+56.5%</strong>)</li>
+        <li>구매 CVR 5.51% → 3.10% (<strong>-43.7%</strong>)</li>
+        <li style="color:var(--red)">⚠️ 효율 낮은 광고그룹 OFF 또는 W1 수준 예산 조정 필요</li>
+      </ul>
+    </div>
+    <div class="insight-box">
+      <h3>Facebook — 비용 유지, 효율 개선</h3>
+      <ul>
+        <li>비용 <strong>-1.2%</strong> (거의 동일)</li>
+        <li>ROAS 272% → 368% (<strong>+35.4%</strong>)</li>
+        <li>구매 CPA 23,305원 → 19,623원 (<strong>-15.8%</strong>)</li>
+        <li>가입→구매 CVR 25.8% → 32.2% (<strong>+25.1%</strong>)</li>
+        <li>ARPPU 71,974원 → 89,665원 (<strong>+24.6%</strong>)</li>
+        <li style="color:var(--green)">✅ 현 소재/타겟 유지 + 소폭 예산 증액 테스트 권장</li>
+      </ul>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="insight-box">
+    <h3>📌 다음 스프린트 제안</h3>
+    <ul>
+      <li><strong>Google 광고그룹 최적화</strong> — W1/W2 광고그룹별 ROAS 비교 → 효율 낮은 그룹 OFF</li>
+      <li><strong>Facebook 예산 증액 테스트</strong> — 현 효율 유지 확인하며 10~20% 단계적 증액</li>
+      <li><strong>Google ARPPU 하락 원인</strong> — 구매 상품 카테고리/할인율 변화 추가 분석</li>
+      <li><strong>Facebook 소재 분석</strong> — workwear 캐러셀 유사 소재 추가 제작, dept store brand 재가동 검토</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// ═══════════ DATA ═══════════
+const G={w1:{imp:476524,click:4739,cost:2172050,signup:452,purchase:261,rev:14812536,puWeb:0,puApp:201,cpi:1444,iap:201},
+         w2:{imp:936527,click:9554,cost:3855783,signup:683,purchase:296,rev:16691660,puWeb:0,puApp:244,cpi:2171,iap:244}};
+const F={w1:{imp:253919,click:5553,cost:2144070,signup:357,purchase:92,rev:5829873,puWeb:0,puApp:81,cpi:1324,iap:81},
+         w2:{imp:266449,click:5484,cost:2119324,signup:335,purchase:108,rev:7800822,puWeb:0,puApp:87,cpi:1407,iap:87}};
+
+function calc(d){
+  for(let w of['w1','w2']){
+    let o=d[w]; o.puTotal=o.puApp+o.puWeb;
+    o.ctr=o.click/o.imp*100; o.cpc=o.cost/o.click;
+    o.signupCvr=o.signup/o.click*100; o.signupCpa=o.cost/o.signup;
+    o.s2pCvr=o.purchase/o.signup*100;
+    o.purCvr=o.purchase/o.click*100; o.purCpa=o.cost/o.purchase;
+    o.roas=o.rev/o.cost*100; o.arppu=o.puTotal?o.rev/o.puTotal:0;
+  }
+}
+calc(G); calc(F);
+
+// Creative data
+const CR=[
+  {name:'carousel_workwear_vari_lastpage',type:'캐러셀',w1:{imp:108897,click:2311,cost:928710,inst:721,signup:174,pur:40,pusr:35,rev:2840891,first:30},w2:{imp:98306,click:1951,cost:799230,inst:652,signup:155,pur:59,pusr:44,rev:4473639,first:35}},
+  {name:'carousel_springoutfits2_45',type:'캐러셀',w1:{imp:100350,click:2103,cost:748367,inst:629,signup:91,pur:23,pusr:23,rev:1450626,first:22},w2:{imp:89251,click:1566,cost:640432,inst:516,signup:121,pur:24,pusr:22,rev:1916412,first:19}},
+  {name:'img-dept store brand(0219)',type:'이미지',w1:{imp:14672,click:344,cost:161550,inst:93,signup:54,pur:24,pusr:19,rev:1260960,first:14},w2:{imp:0,click:0,cost:0,inst:0,signup:3,pur:11,pusr:9,rev:439331,first:4}},
+  {name:'carousel_blackandwhite_45',type:'캐러셀',w1:{imp:23724,click:561,cost:212984,inst:138,signup:29,pur:2,pusr:2,rev:163800,first:2},w2:{imp:16465,click:332,cost:118050,inst:125,signup:23,pur:6,pusr:5,rev:291430,first:5}},
+  {name:'carousel_springwear2_45',type:'캐러셀',w1:{imp:0,click:0,cost:0,inst:0,signup:0,pur:0,pusr:0,rev:0,first:0},w2:{imp:8658,click:173,cost:93548,inst:65,signup:6,pur:3,pusr:2,rev:421160,first:2}},
+  {name:'carousel_springoutfits',type:'캐러셀',w1:{imp:3556,click:158,cost:56731,inst:26,signup:3,pur:3,pusr:2,rev:113596,first:0},w2:{imp:2236,click:71,cost:30165,inst:9,signup:5,pur:1,pusr:1,rev:13900,first:0}},
+  {name:'img_ston-wappen',type:'이미지',w1:{imp:0,click:0,cost:0,inst:0,signup:0,pur:0,pusr:0,rev:0,first:0},w2:{imp:11712,click:666,cost:123339,inst:117,signup:18,pur:0,pusr:0,rev:0,first:0}},
+  {name:'img_ston-tshirt',type:'이미지',w1:{imp:0,click:0,cost:0,inst:0,signup:0,pur:0,pusr:0,rev:0,first:0},w2:{imp:4483,click:135,cost:50758,inst:12,signup:2,pur:0,pusr:0,rev:0,first:0}},
+];
+CR.forEach(c=>{for(let w of['w1','w2']){let o=c[w];
+  o.ctr=o.imp?o.click/o.imp*100:null; o.cpc=o.click?o.cost/o.click:null;
+  o.cpi=o.inst?o.cost/o.inst:null; o.signupCpa=o.signup?o.cost/o.signup:null;
+  o.purCvr=o.click?o.pur/o.click*100:null; o.signupCvr=o.click?o.signup/o.click*100:null;
+  o.purCpa=o.pur?o.cost/o.pur:null; o.roas=o.cost?o.rev/o.cost*100:null;
+  o.arppu=o.pusr?o.rev/o.pusr:null;
+}});
+
+// ═══════════ HELPERS ═══════════
+const fmt=v=>v.toLocaleString('ko-KR');
+const fmtW=v=>fmt(Math.round(v))+'원';
+const fmtP=v=>v.toFixed(2)+'%';
+const wow=(a,b)=>a?((b-a)/a*100):null;
+const wowStr=(a,b)=>{let w=wow(a,b); return w===null?'N/A':(w>=0?'+':'')+w.toFixed(1)+'%';};
+
+const dark={paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#fafafa',size:12},
+  margin:{t:40,b:40,l:50,r:20},legend:{orientation:'h',y:1.12},
+  xaxis:{gridcolor:'#30363d'},yaxis:{gridcolor:'#30363d'}};
+const darkH={...dark,margin:{t:40,b:40,l:180,r:40}};
+
+function kpi(el,label,value,delta,inv){
+  let cls=delta===null?'':(parseFloat(delta)>0?(inv?'down':'up'):(inv?'up':'down'));
+  el.innerHTML+=`<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div>${delta!==null?`<div class="kpi-delta ${cls}">${delta}</div>`:''}</div>`;
+}
+
+// ═══════════ KPI CARDS ═══════════
+function renderKPIs(){
+  let ge=document.getElementById('kpi-google'), fe=document.getElementById('kpi-facebook');
+  [[G,ge,'Google'],[F,fe,'Facebook']].forEach(([d,el])=>{
+    el.innerHTML='';
+    kpi(el,'Cost',fmtW(d.w2.cost),wowStr(d.w1.cost,d.w2.cost),true);
+    kpi(el,'구매완료',fmt(d.w2.purchase)+'건',wowStr(d.w1.purchase,d.w2.purchase));
+    kpi(el,'구매액',fmtW(d.w2.rev),wowStr(d.w1.rev,d.w2.rev));
+    kpi(el,'ROAS',fmtP(d.w2.roas),wowStr(d.w1.roas,d.w2.roas));
+    kpi(el,'구매 CPA',fmtW(d.w2.purCpa),wowStr(d.w1.purCpa,d.w2.purCpa),true);
+    kpi(el,'ARPPU',fmtW(d.w2.arppu),wowStr(d.w1.arppu,d.w2.arppu));
+  });
+}
+
+// ═══════════ CHART BUILDERS ═══════════
+function groupedBar(id,title,metric,suffix,yTitle,dataFn){
+  let gw1=dataFn(G,'w1'),gw2=dataFn(G,'w2'),fw1=dataFn(F,'w1'),fw2=dataFn(F,'w2');
+  Plotly.newPlot(id,[
+    {name:'Google',x:['W1','W2'],y:[gw1,gw2],type:'bar',marker:{color:'#4285F4'},text:[suffix==='%'?gw1.toFixed(2)+'%':fmtW(gw1),suffix==='%'?gw2.toFixed(2)+'%':fmtW(gw2)],textposition:'outside'},
+    {name:'Facebook',x:['W1','W2'],y:[fw1,fw2],type:'bar',marker:{color:'#1877F2'},text:[suffix==='%'?fw1.toFixed(2)+'%':fmtW(fw1),suffix==='%'?fw2.toFixed(2)+'%':fmtW(fw2)],textposition:'outside'},
+  ],{...dark,title,yaxis:{...dark.yaxis,title:yTitle},barmode:'group',height:400});
+}
+
+// Tab: 유입
+function renderInflow(){
+  groupedBar('ch-ctr','CTR (클릭률)','ctr','%','%',(d,w)=>d[w].ctr);
+  groupedBar('ch-cpc','CPC (클릭당 비용)','cpc','won','원',(d,w)=>d[w].cpc);
+  // Impressions
+  Plotly.newPlot('ch-imp',[
+    {name:'Google',x:['W1','W2'],y:[G.w1.imp,G.w2.imp],type:'bar',marker:{color:'#4285F4'},text:[fmt(G.w1.imp),fmt(G.w2.imp)],textposition:'outside'},
+    {name:'Facebook',x:['W1','W2'],y:[F.w1.imp,F.w2.imp],type:'bar',marker:{color:'#1877F2'},text:[fmt(F.w1.imp),fmt(F.w2.imp)],textposition:'outside'},
+  ],{...dark,title:'Impressions (노출수)',barmode:'group',height:400});
+  Plotly.newPlot('ch-click',[
+    {name:'Google',x:['W1','W2'],y:[G.w1.click,G.w2.click],type:'bar',marker:{color:'#4285F4'},text:[fmt(G.w1.click),fmt(G.w2.click)],textposition:'outside'},
+    {name:'Facebook',x:['W1','W2'],y:[F.w1.click,F.w2.click],type:'bar',marker:{color:'#1877F2'},text:[fmt(F.w1.click),fmt(F.w2.click)],textposition:'outside'},
+  ],{...dark,title:'Clicks (클릭수)',barmode:'group',height:400});
+}
+
+// Tab: 가입
+function renderSignup(){
+  groupedBar('ch-signup-cvr','가입 CVR','signupCvr','%','%',(d,w)=>d[w].signupCvr);
+  groupedBar('ch-signup-cpa','가입 CPA','signupCpa','won','원',(d,w)=>d[w].signupCpa);
+  Plotly.newPlot('ch-signup-cnt',[
+    {name:'Google',x:['W1','W2'],y:[G.w1.signup,G.w2.signup],type:'bar',marker:{color:'#4285F4'},text:[fmt(G.w1.signup),fmt(G.w2.signup)],textposition:'outside'},
+    {name:'Facebook',x:['W1','W2'],y:[F.w1.signup,F.w2.signup],type:'bar',marker:{color:'#1877F2'},text:[fmt(F.w1.signup),fmt(F.w2.signup)],textposition:'outside'},
+  ],{...dark,title:'회원가입 수',barmode:'group',height:400});
+  Plotly.newPlot('ch-signup-wow',[
+    {x:['Google','Facebook'],y:[wow(G.w1.signup,G.w2.signup),wow(F.w1.signup,F.w2.signup)],type:'bar',
+     marker:{color:['#4285F4','#1877F2']},text:[wowStr(G.w1.signup,G.w2.signup),wowStr(F.w1.signup,F.w2.signup)],textposition:'outside'},
+  ],{...dark,title:'회원가입 WoW',height:400,shapes:[{type:'line',x0:-0.5,x1:1.5,y0:0,y1:0,line:{dash:'dash',color:'gray'}}]});
+}
+
+// Tab: 가입→구매
+function renderS2P(){
+  groupedBar('ch-s2p-cvr','가입→구매 CVR','s2pCvr','%','%',(d,w)=>d[w].s2pCvr);
+  Plotly.newPlot('ch-s2p-funnel',[
+    {name:'Google',y:['클릭','가입','구매'],x:[G.w2.click,G.w2.signup,G.w2.purchase],type:'funnel',marker:{color:'#4285F4'},textinfo:'value+percent previous'},
+    {name:'Facebook',y:['클릭','가입','구매'],x:[F.w2.click,F.w2.signup,F.w2.purchase],type:'funnel',marker:{color:'#1877F2'},textinfo:'value+percent previous'},
+  ],{...dark,title:'W2 전환 퍼널 (클릭→가입→구매)',height:400});
+}
+
+// Tab: 구매
+function renderPurchase(){
+  groupedBar('ch-pur-cvr','구매 CVR','purCvr','%','%',(d,w)=>d[w].purCvr);
+  groupedBar('ch-pur-cpa','구매 CPA','purCpa','won','원',(d,w)=>d[w].purCpa);
+  // ROAS with OKR line
+  let gw1r=G.w1.roas,gw2r=G.w2.roas,fw1r=F.w1.roas,fw2r=F.w2.roas;
+  Plotly.newPlot('ch-pur-roas',[
+    {name:'Google',x:['W1','W2'],y:[gw1r,gw2r],type:'bar',marker:{color:'#4285F4'},text:[gw1r.toFixed(0)+'%',gw2r.toFixed(0)+'%'],textposition:'outside'},
+    {name:'Facebook',x:['W1','W2'],y:[fw1r,fw2r],type:'bar',marker:{color:'#1877F2'},text:[fw1r.toFixed(0)+'%',fw2r.toFixed(0)+'%'],textposition:'outside'},
+  ],{...dark,title:'ROAS (구매액 / Cost)',barmode:'group',height:400,
+    shapes:[{type:'line',x0:-0.5,x1:1.5,y0:500,y1:500,line:{dash:'dash',color:'#f85149'}}],
+    annotations:[{x:1.5,y:500,text:'OKR 목표 500%',showarrow:false,font:{color:'#f85149',size:11},xanchor:'right',yshift:12}]});
+  groupedBar('ch-pur-arppu','ARPPU','arppu','won','원',(d,w)=>d[w].arppu);
+  // Rev vs Cost
+  Plotly.newPlot('ch-pur-revcost',[
+    {name:'Google 구매액',x:['Google W1','Google W2'],y:[G.w1.rev,G.w2.rev],type:'bar',marker:{color:'#4285F4',opacity:0.8}},
+    {name:'Facebook 구매액',x:['Facebook W1','Facebook W2'],y:[F.w1.rev,F.w2.rev],type:'bar',marker:{color:'#1877F2',opacity:0.8}},
+    {name:'Google Cost',x:['Google W1','Google W2'],y:[G.w1.cost,G.w2.cost],type:'scatter',mode:'markers+lines',marker:{size:10,color:'#4285F4'},line:{dash:'dot'},yaxis:'y2'},
+    {name:'Facebook Cost',x:['Facebook W1','Facebook W2'],y:[F.w1.cost,F.w2.cost],type:'scatter',mode:'markers+lines',marker:{size:10,color:'#1877F2'},line:{dash:'dot'},yaxis:'y2'},
+  ],{...dark,title:'구매액(막대) vs Cost(점선)',barmode:'group',height:420,
+    yaxis:{title:'구매액 (원)',gridcolor:'#30363d'},yaxis2:{title:'Cost (원)',overlaying:'y',side:'right',gridcolor:'transparent'}});
+}
+
+// Tab: 설치
+function renderInstall(){
+  groupedBar('ch-cpi','CPI (설치당 비용)','cpi','won','원',(d,w)=>d[w].cpi);
+  Plotly.newPlot('ch-iap-user',[
+    {name:'Google',x:['W1','W2'],y:[G.w1.iap,G.w2.iap],type:'bar',marker:{color:'#4285F4'},text:[fmt(G.w1.iap),fmt(G.w2.iap)],textposition:'outside'},
+    {name:'Facebook',x:['W1','W2'],y:[F.w1.iap,F.w2.iap],type:'bar',marker:{color:'#1877F2'},text:[fmt(F.w1.iap),fmt(F.w2.iap)],textposition:'outside'},
+  ],{...dark,title:'인앱 구매 유저 수',barmode:'group',height:400});
+}
+
+// Tab: Creative
+function renderCreative(){
+  let ce=document.getElementById('kpi-creative'); ce.innerHTML='';
+  let totalRevW2=CR.reduce((s,c)=>s+c.w2.rev,0), totalCostW2=CR.reduce((s,c)=>s+c.w2.cost,0);
+  let topCr=CR.reduce((a,b)=>a.w2.rev>b.w2.rev?a:b);
+  let roasW2=totalCostW2?totalRevW2/totalCostW2*100:0;
+  kpi(ce,'총 비용 (W2)',fmtW(totalCostW2),null);
+  kpi(ce,'총 구매액 (W2)',fmtW(totalRevW2),null);
+  kpi(ce,'ROAS (W2)',roasW2.toFixed(1)+'%',null);
+  kpi(ce,'1위 소재',topCr.name.slice(0,22),null);
+  kpi(ce,'1위 점유율',(topCr.w2.rev/totalRevW2*100).toFixed(1)+'%',null);
+
+  // Rev W1 vs W2
+  let names=CR.map(c=>c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,30));
+  Plotly.newPlot('ch-cr-rev',[
+    {name:'W1',y:names,x:CR.map(c=>c.w1.rev),type:'bar',orientation:'h',marker:{color:'#5B8FF9'},text:CR.map(c=>fmtW(c.w1.rev)),textposition:'outside'},
+    {name:'W2',y:names,x:CR.map(c=>c.w2.rev),type:'bar',orientation:'h',marker:{color:'#FF6B6B'},text:CR.map(c=>fmtW(c.w2.rev)),textposition:'outside'},
+  ],{...darkH,title:'소재별 구매액 (W1 vs W2)',barmode:'group',height:480});
+
+  // Pie
+  let pieData=CR.filter(c=>c.w2.rev>0);
+  Plotly.newPlot('ch-cr-pie',[{labels:pieData.map(c=>c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,25)),values:pieData.map(c=>c.w2.rev),
+    type:'pie',hole:0.4,textinfo:'label+percent',marker:{colors:['#FF6B6B','#5B8FF9','#61DDAA','#F6BD16','#7262FD','#78D3F8']}}],
+    {...dark,title:'W2 소재별 구매액 점유율',height:480});
+
+  // CTR W1 vs W2
+  let hasCtr=CR.filter(c=>c.w1.ctr!==null||c.w2.ctr!==null);
+  let ctrNames=hasCtr.map(c=>c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,30));
+  Plotly.newPlot('ch-cr-ctr',[
+    {name:'W1',y:ctrNames,x:hasCtr.map(c=>c.w1.ctr||0),type:'bar',orientation:'h',marker:{color:'#5B8FF9'},text:hasCtr.map(c=>c.w1.ctr?c.w1.ctr.toFixed(1)+'%':'-'),textposition:'outside'},
+    {name:'W2',y:ctrNames,x:hasCtr.map(c=>c.w2.ctr||0),type:'bar',orientation:'h',marker:{color:'#FF6B6B'},text:hasCtr.map(c=>c.w2.ctr?c.w2.ctr.toFixed(1)+'%':'-'),textposition:'outside'},
+  ],{...darkH,title:'CTR (클릭률)',barmode:'group',height:420});
+
+  // CPC W1 vs W2
+  Plotly.newPlot('ch-cr-cpc',[
+    {name:'W1',y:ctrNames,x:hasCtr.map(c=>c.w1.cpc||0),type:'bar',orientation:'h',marker:{color:'#5B8FF9'},text:hasCtr.map(c=>c.w1.cpc?Math.round(c.w1.cpc)+'원':'-'),textposition:'outside'},
+    {name:'W2',y:ctrNames,x:hasCtr.map(c=>c.w2.cpc||0),type:'bar',orientation:'h',marker:{color:'#FF6B6B'},text:hasCtr.map(c=>c.w2.cpc?Math.round(c.w2.cpc)+'원':'-'),textposition:'outside'},
+  ],{...darkH,title:'CPC (클릭당 비용)',barmode:'group',height:420});
+
+  // ROAS W1 vs W2
+  let hasRoas=CR.filter(c=>c.w1.roas||c.w2.roas);
+  let roasNames=hasRoas.map(c=>c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,30));
+  Plotly.newPlot('ch-cr-roas',[
+    {name:'W1',y:roasNames,x:hasRoas.map(c=>c.w1.roas||0),type:'bar',orientation:'h',marker:{color:'#5B8FF9'},text:hasRoas.map(c=>c.w1.roas?c.w1.roas.toFixed(0)+'%':'-'),textposition:'outside'},
+    {name:'W2',y:roasNames,x:hasRoas.map(c=>c.w2.roas||0),type:'bar',orientation:'h',marker:{color:'#FF6B6B'},text:hasRoas.map(c=>c.w2.roas?c.w2.roas.toFixed(0)+'%':'-'),textposition:'outside'},
+  ],{...darkH,title:'ROAS (구매액/비용)',barmode:'group',height:420,
+    shapes:[{type:'line',x0:500,x1:500,y0:-0.5,y1:roasNames.length-0.5,line:{dash:'dash',color:'#f85149'}}],
+    annotations:[{x:500,y:roasNames.length-0.5,text:'OKR 500%',showarrow:false,font:{color:'#f85149'},yshift:14}]});
+
+  // CPA W1 vs W2
+  let hasCpa=CR.filter(c=>c.w1.purCpa||c.w2.purCpa);
+  let cpaNames=hasCpa.map(c=>c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,30));
+  Plotly.newPlot('ch-cr-cpa',[
+    {name:'W1',y:cpaNames,x:hasCpa.map(c=>c.w1.purCpa||0),type:'bar',orientation:'h',marker:{color:'#5B8FF9'},text:hasCpa.map(c=>c.w1.purCpa?fmtW(c.w1.purCpa):'-'),textposition:'outside'},
+    {name:'W2',y:cpaNames,x:hasCpa.map(c=>c.w2.purCpa||0),type:'bar',orientation:'h',marker:{color:'#FF6B6B'},text:hasCpa.map(c=>c.w2.purCpa?fmtW(c.w2.purCpa):'-'),textposition:'outside'},
+  ],{...darkH,title:'CPA (구매당 비용)',barmode:'group',height:420});
+
+  // Funnel top 3
+  let top3=CR.filter(c=>c.w2.rev>0).sort((a,b)=>b.w2.rev-a.w2.rev).slice(0,3);
+  let funnelTraces=top3.map((c,i)=>({name:c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,22),
+    y:['클릭','설치','가입','구매'],x:[c.w2.click,c.w2.inst,c.w2.signup,c.w2.pur],
+    type:'funnel',marker:{color:['#FF6B6B','#5B8FF9','#61DDAA'][i]},textinfo:'value+percent previous'}));
+  Plotly.newPlot('ch-cr-funnel',funnelTraces,{...dark,title:'상위 3개 소재 전환 퍼널 (W2)',height:420});
+
+  // CVR
+  let hasCvr=CR.filter(c=>c.w2.click>0);
+  let cvrNames=hasCvr.map(c=>c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,30));
+  Plotly.newPlot('ch-cr-cvr',[
+    {name:'CVR(가입)',y:cvrNames,x:hasCvr.map(c=>c.w2.signupCvr||0),type:'bar',orientation:'h',marker:{color:'#61DDAA'},text:hasCvr.map(c=>c.w2.signupCvr?c.w2.signupCvr.toFixed(2)+'%':'-'),textposition:'outside'},
+    {name:'CVR(구매)',y:cvrNames,x:hasCvr.map(c=>c.w2.purCvr||0),type:'bar',orientation:'h',marker:{color:'#FF6B6B'},text:hasCvr.map(c=>c.w2.purCvr?c.w2.purCvr.toFixed(2)+'%':'-'),textposition:'outside'},
+  ],{...darkH,title:'소재별 CVR 비교 (W2)',barmode:'group',height:420});
+
+  // ARPPU
+  let hasArppu=CR.filter(c=>c.w2.arppu);
+  Plotly.newPlot('ch-cr-arppu',[{y:hasArppu.map(c=>c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,30)),
+    x:hasArppu.map(c=>c.w2.arppu),type:'bar',orientation:'h',marker:{color:'#7262FD'},
+    text:hasArppu.map(c=>fmtW(c.w2.arppu)),textposition:'outside'}],
+    {...darkH,title:'ARPPU (W2)',height:380});
+
+  // CPI
+  let hasCpi=CR.filter(c=>c.w2.cpi);
+  Plotly.newPlot('ch-cr-cpi2',[{y:hasCpi.map(c=>c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,30)),
+    x:hasCpi.map(c=>c.w2.cpi),type:'bar',orientation:'h',marker:{color:'#78D3F8'},
+    text:hasCpi.map(c=>fmtW(c.w2.cpi)),textposition:'outside'}],
+    {...darkH,title:'CPI — 설치당 비용 (W2)',height:380});
+
+  // Table
+  let html='<table><tr><th>소재명</th><th>유형</th><th>노출</th><th>클릭</th><th>CTR</th><th>비용</th><th>CPC</th><th>설치</th><th>CPI</th><th>가입</th><th>CPA(가입)</th><th>구매</th><th>CPA(구매)</th><th>구매액</th><th>ROAS</th><th>ARPPU</th><th>첫구매</th></tr>';
+  CR.forEach(c=>{let w=c.w2;
+    html+=`<tr><td>${c.name.replace(/^(\d{6}_|20\d{6}-)/,'').slice(0,30)}</td><td>${c.type}</td>`;
+    html+=`<td>${w.imp?fmt(w.imp):'-'}</td><td>${w.click?fmt(w.click):'-'}</td>`;
+    html+=`<td>${w.ctr?w.ctr.toFixed(1)+'%':'-'}</td><td>${w.cost?fmtW(w.cost):'-'}</td>`;
+    html+=`<td>${w.cpc?Math.round(w.cpc)+'원':'-'}</td><td>${fmt(w.inst)}</td>`;
+    html+=`<td>${w.cpi?Math.round(w.cpi)+'원':'-'}</td><td>${fmt(w.signup)}</td>`;
+    html+=`<td>${w.signupCpa?fmtW(w.signupCpa):'-'}</td><td>${fmt(w.pur)}</td>`;
+    html+=`<td>${w.purCpa?fmtW(w.purCpa):'-'}</td><td>${fmtW(w.rev)}</td>`;
+    html+=`<td>${w.roas?'<span class="'+(w.roas>=500?'highlight':'')+'">'+ w.roas.toFixed(1)+'%</span>':'-'}</td>`;
+    html+=`<td>${w.arppu?fmtW(w.arppu):'-'}</td><td>${fmt(w.first)}</td></tr>`;
+  });
+  html+='</table>';
+  document.getElementById('cr-table').innerHTML=html;
+}
+
+// Tab: Compare
+function renderCompare(){
+  // Radar
+  let cats=['CTR','가입 CVR','가입→구매 CVR','구매 CVR','ROAS(÷100)','ARPPU(÷1000)'];
+  let gv=[G.w2.ctr,G.w2.signupCvr,G.w2.s2pCvr,G.w2.purCvr,G.w2.roas/100,G.w2.arppu/1000];
+  let fv=[F.w2.ctr,F.w2.signupCvr,F.w2.s2pCvr,F.w2.purCvr,F.w2.roas/100,F.w2.arppu/1000];
+  Plotly.newPlot('ch-radar',[
+    {name:'Google',type:'scatterpolar',r:[...gv,gv[0]],theta:[...cats,cats[0]],fill:'toself',line:{color:'#4285F4'},opacity:0.6},
+    {name:'Facebook',type:'scatterpolar',r:[...fv,fv[0]],theta:[...cats,cats[0]],fill:'toself',line:{color:'#1877F2'},opacity:0.6},
+  ],{...dark,title:'W2 채널별 효율 비교 (레이더)',polar:{radialaxis:{visible:true,gridcolor:'#30363d'},angularaxis:{gridcolor:'#30363d'}},height:480});
+
+  // Bubble
+  let traces=[];
+  [[G,'Google','#4285F4'],[F,'Facebook','#1877F2']].forEach(([d,n,c])=>{
+    ['w1','w2'].forEach(w=>{
+      traces.push({name:`${n} ${w.toUpperCase()}`,x:[d[w].cost],y:[d[w].roas],mode:'markers+text',
+        marker:{size:d[w].rev/400000+10,color:c,opacity:w==='w2'?0.9:0.4,line:{width:2,color:'white'}},
+        text:`${n.slice(0,2)} ${w.toUpperCase()}`,textposition:'top center'});
+    });
+  });
+  Plotly.newPlot('ch-bubble',traces,{...dark,title:'Cost vs ROAS (버블 크기=구매액)',xaxis:{title:'Cost (원)',gridcolor:'#30363d'},yaxis:{title:'ROAS (%)',gridcolor:'#30363d'},height:480,
+    shapes:[{type:'line',x0:0,x1:5000000,y0:500,y1:500,line:{dash:'dash',color:'#f85149'}}],
+    annotations:[{x:4800000,y:500,text:'OKR 500%',showarrow:false,font:{color:'#f85149'},yshift:12}]});
+
+  // Table
+  let metrics=[['Cost',fmtW(G.w2.cost),fmtW(F.w2.cost)],['Impressions',fmt(G.w2.imp),fmt(F.w2.imp)],['Clicks',fmt(G.w2.click),fmt(F.w2.click)],
+    ['CTR',fmtP(G.w2.ctr),fmtP(F.w2.ctr)],['CPC',fmtW(G.w2.cpc),fmtW(F.w2.cpc)],['회원가입',fmt(G.w2.signup)+'명',fmt(F.w2.signup)+'명'],
+    ['가입 CVR',fmtP(G.w2.signupCvr),fmtP(F.w2.signupCvr)],['가입 CPA',fmtW(G.w2.signupCpa),fmtW(F.w2.signupCpa)],
+    ['가입→구매 CVR',fmtP(G.w2.s2pCvr),fmtP(F.w2.s2pCvr)],['구매완료',fmt(G.w2.purchase)+'건',fmt(F.w2.purchase)+'건'],
+    ['구매액',fmtW(G.w2.rev),fmtW(F.w2.rev)],['구매 CVR',fmtP(G.w2.purCvr),fmtP(F.w2.purCvr)],
+    ['구매 CPA',fmtW(G.w2.purCpa),fmtW(F.w2.purCpa)],['ROAS',fmtP(G.w2.roas),fmtP(F.w2.roas)],
+    ['ARPPU',fmtW(G.w2.arppu),fmtW(F.w2.arppu)],['CPI',fmtW(G.w2.cpi),fmtW(F.w2.cpi)]];
+  let h='<table><tr><th>지표</th><th>Google</th><th>Facebook</th></tr>';
+  metrics.forEach(([l,g,f])=>h+=`<tr><td>${l}</td><td>${g}</td><td>${f}</td></tr>`);
+  document.getElementById('compare-table').innerHTML=h+'</table>';
+}
+
+// ═══════════ TAB SWITCHING ═══════════
+const tabMap={inflow:'tab-inflow',signup:'tab-signup',s2p:'tab-s2p',purchase:'tab-purchase',
+  install:'tab-install',creative:'tab-creative',compare:'tab-compare',insight:'tab-insight'};
+const renderers={inflow:renderInflow,signup:renderSignup,s2p:renderS2P,purchase:renderPurchase,
+  install:renderInstall,creative:renderCreative,compare:renderCompare};
+let rendered={};
+
+function showTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',Object.keys(tabMap)[i]===id));
+  Object.values(tabMap).forEach(v=>document.getElementById(v).classList.remove('active'));
+  document.getElementById(tabMap[id]).classList.add('active');
+  if(renderers[id]&&!rendered[id]){renderers[id]();rendered[id]=true;}
+}
+
+// ═══════════ INIT ═══════════
+renderKPIs();
+renderInflow();
+rendered.inflow=true;
+</script>
+</body>
+</html>
