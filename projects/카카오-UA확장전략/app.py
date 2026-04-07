@@ -41,8 +41,8 @@ st.markdown("""
 st.title("UA 확장 전략")
 st.caption("기준 기간: 2026.03.09 ~ 04.06 | 보정계수 1.76 (카카오만 적용) | RT 목표 보정 ROAS 500% · UA 목표 보정 ROAS 400% | 메타·구글은 Raw ROAS")
 
-tab_gap, tab_overview, tab_kakao, tab_meta, tab_google = st.tabs([
-    "목표 대비 갭 분석", "전체 현황", "카카오 (UA + 앱설치)", "메타 (앱설치-구매)", "구글 (앱설치-구매)"
+tab_gap, tab_kakao, tab_meta, tab_google = st.tabs([
+    "목표 대비 갭 분석", "카카오 (UA + 앱설치)", "메타 (앱설치-구매)", "구글 (앱설치-구매)"
 ])
 
 
@@ -250,77 +250,20 @@ with tab_gap:
 
 
 # ═══════════════════════════════════════════════════════════════
-# TAB 1: 전체 현황
+# TAB 2: 카카오 (UA + 앱설치) — PBTD 전용
 # ═══════════════════════════════════════════════════════════════
-with tab_overview:
-    st.markdown('<div class="section-header"><h3>채널별 UA 성과 요약 (3/9~4/6)</h3></div>', unsafe_allow_html=True)
+with tab_kakao:
+    st.markdown('<div class="channel-kakao"><h3>카카오 PBTD UA 확장 + 앱설치-다운 캠페인</h3></div>', unsafe_allow_html=True)
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown('<div class="metric-card metric-red"><h3>카카오 RT (보정)</h3><h1>497%</h1><h3>목표 500% | 비용 1.13억</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-card"><h3>PBTD UA 비용 (4주)</h3><h1>1,170만</h1></div>', unsafe_allow_html=True)
     with col2:
-        st.markdown('<div class="metric-card metric-green"><h3>카카오 UA (보정)</h3><h1>487%</h1><h3>목표 400% | 비용 2.10억</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-card metric-green"><h3>PBTD UA 보정 ROAS</h3><h1>462%</h1></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown('<div class="metric-card"><h3>메타 앱구매 (Raw)</h3><h1>341%</h1><h3>보정 없음 | 비용 0.08억</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-card"><h3>PBTD UA 전환</h3><h1>456건</h1></div>', unsafe_allow_html=True)
     with col4:
-        st.markdown('<div class="metric-card"><h3>구글 앱설치 (Raw)</h3><h1>388%</h1><h3>보정 없음 | 비용 0.06억</h3></div>', unsafe_allow_html=True)
-
-    channel_df = pd.DataFrame({
-        "채널": ["카카오 RT\n(보정)", "카카오 UA\n(보정)", "메타 앱구매\n(Raw)", "구글 앱설치\n(Raw)"],
-        "비용(만)": [11290, 21019, 790, 636],
-        "매출(만)": [31900, 58843, 2691, 2471],
-        "ROAS(%)": [497, 487, 341, 388],
-        "ROAS 유형": ["보정", "보정", "Raw", "Raw"],
-        "전환수": [5753, 17785, 401, 470],
-    })
-
-    col_l, col_r = st.columns(2)
-    with col_l:
-        fig_ch = go.Figure()
-        fig_ch.add_trace(go.Bar(x=channel_df["채널"], y=channel_df["비용(만)"], name="비용", marker_color="#ef4444"))
-        fig_ch.add_trace(go.Bar(x=channel_df["채널"], y=channel_df["매출(만)"], name="매출", marker_color="#22c55e"))
-        fig_ch.update_layout(title="채널별 비용 vs 매출 (4주)", height=380, template="plotly_dark", barmode="group",
-                             yaxis_title="만원", legend=dict(orientation="h", y=-0.15))
-        st.plotly_chart(fig_ch, use_container_width=True)
-
-    with col_r:
-        fig_roas = go.Figure()
-        colors = ["#ef4444", "#22c55e", "#a855f7", "#eab308"]
-        fig_roas.add_trace(go.Bar(x=channel_df["채널"], y=channel_df["ROAS(%)"],
-                                  marker_color=colors, text=channel_df["ROAS(%)"].apply(lambda x: f"{x}%"),
-                                  textposition="outside"))
-        fig_roas.update_layout(title="채널별 ROAS (카카오=보정, 메타·구글=Raw)", height=380, template="plotly_dark",
-                               yaxis_title="ROAS (%)")
-        st.plotly_chart(fig_roas, use_container_width=True)
-
-    st.markdown('<div class="section-header"><h3>UA 확장 예산 배분안 (일예산 기준)</h3></div>', unsafe_allow_html=True)
-    budget_all = pd.DataFrame({
-        "채널": ["카카오 UA (웹)", "카카오 앱설치-다운", "메타 앱설치-구매", "구글 앱설치-구매"],
-        "일예산": ["350만", "150만", "확장 예정 (별도)", "50만→150만 (별도)"],
-        "캠페인 유형": ["PBTD UA 기획전 중심", "앱설치 + 인앱구매 최적화", "앱설치-구매 (콘텐츠)", "앱 캠페인 Purchase 최적화"],
-        "예상 ROAS": ["보정 420~500%", "보정 400~450%", "Raw 340%+", "Raw 390%+"],
-        "비고": ["기존 유지 + 신규 5개 그룹", "신규 캠페인 셋업 필요", "기존 확장 + 소재 다양화", "예산 증액 + 소재 다양화"],
-    })
-    st.dataframe(budget_all, use_container_width=True, hide_index=True)
-
-
-# ═══════════════════════════════════════════════════════════════
-# TAB 2: 카카오 (UA + 앱설치)
-# ═══════════════════════════════════════════════════════════════
-with tab_kakao:
-    st.markdown('<div class="channel-kakao"><h3>카카오 UA 확장 + 앱설치-다운 캠페인</h3></div>', unsafe_allow_html=True)
-
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.markdown('<div class="metric-card"><h3>RT 비용 (4주)</h3><h1>1.13억</h1></div>', unsafe_allow_html=True)
-    with col2:
-        st.markdown('<div class="metric-card"><h3>RT 보정 ROAS</h3><h1>497%</h1></div>', unsafe_allow_html=True)
-    with col3:
-        st.markdown('<div class="metric-card"><h3>기존 UA 비용</h3><h1>2.10억</h1></div>', unsafe_allow_html=True)
-    with col4:
-        st.markdown('<div class="metric-card"><h3>기존 UA 보정 ROAS</h3><h1>487%</h1></div>', unsafe_allow_html=True)
-    with col5:
-        st.markdown('<div class="metric-card"><h3>PBTD UA 보정 ROAS</h3><h1>462%</h1></div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-card"><h3>PBTD UA CPC</h3><h1>178원</h1></div>', unsafe_allow_html=True)
 
     weekly_data = pd.DataFrame({
         "주차": ["11주차 (3/9~)", "12주차 (3/16~)", "13주차 (3/23~)", "14주차 (3/30~)"],

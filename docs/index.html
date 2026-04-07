@@ -66,7 +66,6 @@
 
 <div class="tabs">
   <div class="tab active" onclick="showTab('gap',this)">목표 대비 갭 분석</div>
-  <div class="tab" onclick="showTab('overview',this)">전체 현황</div>
   <div class="tab" onclick="showTab('kakao',this)">카카오 (UA + 앱설치)</div>
   <div class="tab" onclick="showTab('meta',this)">메타 (앱설치-구매)</div>
   <div class="tab" onclick="showTab('google',this)">구글 (앱설치-구매)</div>
@@ -166,35 +165,14 @@
   - <strong>메타·구글</strong>: 보정 없이 Raw ROAS 기준 운영, 학습 안정화 후 확장</blockquote>
 </div>
 
-<!-- ═══ TAB: 전체 현황 ═══ -->
-<div id="overview" class="tab-content">
-  <h2>채널별 UA 성과 요약 (3/9~4/6)</h2>
-  <div class="metrics">
-    <div class="metric"><div class="label">카카오 RT (보정)</div><div class="value red">497%</div><div class="sub">목표 500% | 비용 1.13억</div></div>
-    <div class="metric"><div class="label">카카오 UA (보정)</div><div class="value green">487%</div><div class="sub">목표 400% | 비용 2.10억</div></div>
-    <div class="metric"><div class="label">메타 앱구매 (Raw)</div><div class="value">341%</div><div class="sub">보정 없음 | 비용 0.08억</div></div>
-    <div class="metric"><div class="label">구글 앱설치 (Raw)</div><div class="value">388%</div><div class="sub">보정 없음 | 비용 0.06억</div></div>
-  </div>
-
-  <h3>UA 확장 예산 배분안</h3>
-  <table>
-    <tr><th>채널</th><th>일예산</th><th>캠페인 유형</th><th>예상 보정ROAS</th><th>비고</th></tr>
-    <tr><td>카카오 UA (웹)</td><td>350만</td><td>PBTD UA 기획전 중심</td><td>보정 420~500%</td><td>기존 유지 + 신규 5개 그룹</td></tr>
-    <tr><td>카카오 앱설치-다운</td><td>150만</td><td>앱설치 + 인앱구매 최적화</td><td>보정 400~450%</td><td>신규 캠페인 셋업 필요</td></tr>
-    <tr><td>메타 앱설치-구매</td><td>확장 예정 (별도)</td><td>앱설치-구매 (콘텐츠)</td><td>Raw 340%+</td><td>기존 확장 + 소재 다양화</td></tr>
-    <tr><td>구글 앱설치-구매</td><td>50만&rarr;150만 (별도)</td><td>앱 캠페인 Purchase</td><td>Raw 390%+</td><td>예산 점진 증액</td></tr>
-  </table>
-</div>
-
 <!-- ═══ TAB: 카카오 ═══ -->
 <div id="kakao" class="tab-content">
-  <h2>카카오 UA 확장 + 앱설치-다운 캠페인</h2>
+  <h2>카카오 PBTD UA 확장 + 앱설치-다운 캠페인</h2>
   <div class="metrics">
-    <div class="metric"><div class="label">RT 비용 (4주)</div><div class="value">1.13억</div></div>
-    <div class="metric"><div class="label">RT 보정 ROAS</div><div class="value green">497%</div></div>
-    <div class="metric"><div class="label">기존 UA 비용</div><div class="value">2.10억</div></div>
-    <div class="metric"><div class="label">기존 UA 보정 ROAS</div><div class="value green">487%</div></div>
+    <div class="metric"><div class="label">PBTD UA 비용 (4주)</div><div class="value">1,170만</div></div>
     <div class="metric"><div class="label">PBTD UA 보정 ROAS</div><div class="value green">462%</div></div>
+    <div class="metric"><div class="label">PBTD UA 전환</div><div class="value">456건</div></div>
+    <div class="metric"><div class="label">PBTD UA CPC</div><div class="value">178원</div></div>
   </div>
 
   <h3>1순위 - 즉시 오픈 (일예산 250만)</h3>
