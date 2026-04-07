@@ -304,39 +304,36 @@ with tab1:
 
 # ──────────────── 가입 탭 ────────────────
 with tab2:
-    st.subheader("가입 지표 — CVR, CPA")
+    st.subheader("가입 지표 — CVR, CPA (ua 캠페인)")
+    st.caption("리타겟팅 캠페인은 기존 유저 대상이라 가입이 극소수 → ua만 표시합니다.")
+
+    ua_join = df[df["캠페인"] == "bizboard-ua"]
 
     col1, col2 = st.columns(2)
 
     with col1:
         fig = go.Figure()
-        for camp in CAMPAIGNS:
-            camp_df = df[df["캠페인"] == camp]
-            fig.add_trace(go.Bar(
-                name=camp, x=camp_df["주차"], y=camp_df["가입 CVR"],
-                marker_color=COLORS[camp],
-                text=[f"{v:.3f}%" for v in camp_df["가입 CVR"]],
-                textposition="outside",
-            ))
-        fig.update_layout(title="가입 CVR (회원가입 / Clicks)", yaxis_title="%", barmode="group", height=400)
+        fig.add_trace(go.Bar(
+            x=ua_join["주차"], y=ua_join["가입 CVR"],
+            marker_color=["#5B8FF9", "#FF6B6B"],
+            text=[f"{v:.2f}%" for v in ua_join["가입 CVR"]],
+            textposition="outside", width=0.4,
+        ))
+        fig.update_layout(title="가입 CVR (회원가입 / Clicks)", yaxis_title="%", height=400)
         apply_chart_margin(fig)
         st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         fig = go.Figure()
-        for camp in CAMPAIGNS:
-            camp_df = df[df["캠페인"] == camp]
-            fig.add_trace(go.Bar(
-                name=camp, x=camp_df["주차"], y=camp_df["가입 CPA"],
-                marker_color=COLORS[camp],
-                text=[f"{v:,.0f}원" for v in camp_df["가입 CPA"]],
-                textposition="outside",
-            ))
-        fig.update_layout(title="가입 CPA (비용 / 회원가입)", yaxis_title="원", barmode="group", height=400)
+        fig.add_trace(go.Bar(
+            x=ua_join["주차"], y=ua_join["가입 CPA"],
+            marker_color=["#5B8FF9", "#FF6B6B"],
+            text=[f"{v:,.0f}원" for v in ua_join["가입 CPA"]],
+            textposition="outside", width=0.4,
+        ))
+        fig.update_layout(title="가입 CPA (비용 / 회원가입)", yaxis_title="원", height=400)
         apply_chart_margin(fig)
         st.plotly_chart(fig, use_container_width=True)
-
-    st.info("💡 retarget 캠페인은 기존 유저 대상이라 가입 수가 극소수입니다. **ua 캠페인 기준**으로 보는 것이 적절합니다.")
 
 # ──────────────── 가입→구매 탭 ────────────────
 with tab3:
@@ -435,7 +432,7 @@ with tab4:
                 text=[f"{v:.0f}%" for v in camp_df["ROAS"]],
                 textposition="outside",
             ))
-        fig.add_hline(y=100, line_dash="dash", line_color="red", annotation_text="손익분기 100%")
+        fig.add_hline(y=500, line_dash="dash", line_color="red", annotation_text="OKR 500%")
         fig.update_layout(title="ROAS (에어브릿지 ROAS × 1.763)", yaxis_title="%", barmode="group", height=400)
         apply_chart_margin(fig)
         st.plotly_chart(fig, use_container_width=True)
@@ -500,7 +497,7 @@ with tab5:
                 text=[f"{v:.0f}%" for v in week_data["ROAS"]],
                 textposition="outside",
             ))
-        fig.add_vline(x=100, line_dash="dash", line_color="red", annotation_text="손익분기")
+        fig.add_vline(x=500, line_dash="dash", line_color="red", annotation_text="OKR 500%")
         fig.update_layout(barmode="group", height=max(400, len(adgroups) * 45), xaxis_title="ROAS %",
                          margin=dict(l=200))
         apply_chart_margin(fig)

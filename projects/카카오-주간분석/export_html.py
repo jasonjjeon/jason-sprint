@@ -208,20 +208,19 @@ fig.update_layout(title="Clicks (클릭수)", yaxis_title="회", barmode="group"
 ch_clk = fig_html(fig)
 
 # ──────────────────────────────────────────────
-# 탭2: 가입
+# 탭2: 가입 (ua만)
 # ──────────────────────────────────────────────
+ua_join = df[df["캠페인"] == "bizboard-ua"]
 fig = go.Figure()
-for c in CAMPAIGNS:
-    d = df[df["캠페인"] == c]
-    fig.add_trace(go.Bar(name=c, x=d["주차"], y=d["가입 CVR"], marker_color=COLORS[c], text=[f"{v:.3f}%" for v in d["가입 CVR"]], textposition="outside"))
-fig.update_layout(title="가입 CVR (회원가입 / Clicks)", yaxis_title="%", barmode="group")
+fig.add_trace(go.Bar(x=ua_join["주차"], y=ua_join["가입 CVR"], marker_color=["#5B8FF9","#FF6B6B"],
+                     text=[f"{v:.2f}%" for v in ua_join["가입 CVR"]], textposition="outside", width=0.4))
+fig.update_layout(title="가입 CVR (회원가입 / Clicks)", yaxis_title="%")
 ch_join_cvr = fig_html(fig)
 
 fig = go.Figure()
-for c in CAMPAIGNS:
-    d = df[df["캠페인"] == c]
-    fig.add_trace(go.Bar(name=c, x=d["주차"], y=d["가입 CPA"], marker_color=COLORS[c], text=[f"{v:,.0f}원" for v in d["가입 CPA"]], textposition="outside"))
-fig.update_layout(title="가입 CPA (비용 / 회원가입)", yaxis_title="원", barmode="group")
+fig.add_trace(go.Bar(x=ua_join["주차"], y=ua_join["가입 CPA"], marker_color=["#5B8FF9","#FF6B6B"],
+                     text=[f"{v:,.0f}원" for v in ua_join["가입 CPA"]], textposition="outside", width=0.4))
+fig.update_layout(title="가입 CPA (비용 / 회원가입)", yaxis_title="원")
 ch_join_cpa = fig_html(fig)
 
 # ──────────────────────────────────────────────
@@ -263,7 +262,7 @@ fig = go.Figure()
 for c in CAMPAIGNS:
     d = df[df["캠페인"] == c]
     fig.add_trace(go.Bar(name=c, x=d["주차"], y=d["ROAS"], marker_color=COLORS[c], text=[f"{v:.0f}%" for v in d["ROAS"]], textposition="outside"))
-fig.add_hline(y=100, line_dash="dash", line_color="red", annotation_text="손익분기 100%")
+fig.add_hline(y=500, line_dash="dash", line_color="red", annotation_text="OKR 500%")
 fig.update_layout(title="ROAS (에어브릿지 ROAS × 1.763)", yaxis_title="%", barmode="group")
 ch_roas = fig_html(fig)
 
@@ -299,7 +298,7 @@ for camp in CAMPAIGNS:
         wd = camp_data[camp_data["주차"] == wk].sort_values("ROAS", ascending=True)
         fig.add_trace(go.Bar(name=wk, y=wd["광고그룹"], x=wd["ROAS"], orientation="h", marker_color=color,
                              text=[f"{v:.0f}%" for v in wd["ROAS"]], textposition="outside"))
-    fig.add_vline(x=100, line_dash="dash", line_color="red", annotation_text="손익분기")
+    fig.add_vline(x=500, line_dash="dash", line_color="red", annotation_text="OKR 500%")
     fig.update_layout(barmode="group", height=h, xaxis_title="ROAS %", margin=dict(t=50,b=40,l=200,r=60), title=f"{camp} — ROAS")
     roas_ch = fig_html_h(fig, h)
 
@@ -422,9 +421,9 @@ tr:hover {{ background:#262830; }}
 </div>
 
 <div id="tab2" class="tab-content">
-    <h2>가입 지표 — CVR, CPA</h2>
+    <h2>가입 지표 — CVR, CPA (ua 캠페인)</h2>
+    <p style="color:#9ca3af;font-size:13px;margin-bottom:16px">리타겟팅 캠페인은 기존 유저 대상이라 가입이 극소수 → ua만 표시합니다.</p>
     <div class="chart-grid"><div class="chart-box">{ch_join_cvr}</div><div class="chart-box">{ch_join_cpa}</div></div>
-    <div class="note">💡 retarget 캠페인은 기존 유저 대상이라 가입 수가 극소수입니다. <strong>ua 캠페인 기준</strong>으로 보는 것이 적절합니다.</div>
 </div>
 
 <div id="tab3" class="tab-content">
