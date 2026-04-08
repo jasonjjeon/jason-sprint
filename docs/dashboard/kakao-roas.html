@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>카카오 광고그룹 ROAS</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+  :root { --bg:#0e1117; --card:#1a1d23; --text:#fafafa; --muted:#8b949e; --border:#30363d;
+          --green:#2ea043; --orange:#FF8800; --red:#f85149; --gold:#FFD700; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,'Pretendard',sans-serif; background:var(--bg); color:var(--text); padding:24px; }
+  h1 { font-size:28px; margin-bottom:4px; }
+  .caption { color:var(--muted); font-size:13px; margin-bottom:20px; }
+  .divider { border-top:1px solid var(--border); margin:24px 0; }
+  .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+  .kpi { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px; }
+  .kpi-label { font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .kpi-value { font-size:22px; font-weight:700; }
+  .chart-box { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:20px; }
+  .section-title { font-size:16px; font-weight:600; margin:20px 0 12px; }
+  .table-wrap { overflow-x:auto; margin-bottom:20px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th,td { padding:8px 10px; border:1px solid var(--border); text-align:right; white-space:nowrap; }
+  th { background:var(--card); color:var(--muted); font-weight:600; position:sticky; top:0; }
+  td:first-child { text-align:left; max-width:280px; overflow:hidden; text-overflow:ellipsis; }
+  tr:hover td { background:rgba(255,255,255,0.03); }
+  .roas-high { color:var(--green); font-weight:700; }
+  .roas-mid { color:var(--orange); }
+  .roas-low { color:var(--red); }
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+  .badge-green { background:rgba(46,160,67,0.15); color:var(--green); }
+  .badge-orange { background:rgba(255,136,0,0.15); color:var(--orange); }
+  .badge-red { background:rgba(248,81,73,0.15); color:var(--red); }
+  .legend { display:flex; gap:16px; margin-top:8px; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>카카오 광고그룹 ROAS</h1>
+<p class="caption">상위 20개 광고그룹 (7일 ROAS 기준) | 데이터 소스: DATA_DB > marketing_cost | 스냅샷: 2026-04-08</p>
+
+<div class="divider"></div>
+
+<div class="kpi-row" id="kpis"></div>
+
+<div class="chart-box" id="chart-roas"></div>
+
+<div class="section-title">상위 20개 광고그룹 상세 성과표</div>
+<div class="legend">
+  <span><span class="badge badge-green">5 이상</span> 우수</span>
+  <span><span class="badge badge-orange">3~5</span> 보통</span>
+  <span><span class="badge badge-red">3 미만</span> 개선 필요</span>
+</div>
+<div class="table-wrap" id="data-table"></div>
+
+<script>
+const DATA=[
+  {ag:"male3070-2603_focus_fahrenheit_outlet-promotion",camp:"bizboard-retarget",c1:0,r1:138500,ro1:null,c7:1132196,r7:8425555,ro7:7.44,c30:42756973,r30:127969454,ro30:2.99},
+  {ag:"male3064-sel_br_sieg-promotion",camp:"bizboard-retarget",c1:49812,r1:454982,ro1:9.13,c7:700291,r7:4870403,ro7:6.95,c30:4946891,r30:18560514,ro30:3.75},
+  {ag:"male3570-sel_br_pingfantom-promotion",camp:"display-retarget",c1:181851,r1:1166560,ro1:6.41,c7:1967903,r7:13282212,ro7:6.75,c30:14091281,r30:61292576,ro30:4.35},
+  {ag:"male3064-sel_br_spyder-promotion",camp:"bizboard-retarget",c1:128623,r1:1147035,ro1:8.92,c7:1230608,r7:8110345,ro7:6.59,c30:11498816,r30:50483135,ro30:4.39},
+  {ag:"male3070-sel_br_intermezzo-promotion",camp:"display-retarget",c1:225023,r1:1653059,ro1:7.35,c7:1108286,r7:7279904,ro7:6.57,c30:10499527,r30:43968155,ro30:4.19},
+  {ag:"male3570-sel_br_pingfantom-promotion",camp:"bizboard-retarget",c1:255144,r1:1754933,ro1:6.88,c7:2163160,r7:13648528,ro7:6.31,c30:11473096,r30:53840331,ro30:4.69},
+  {ag:"male3564-2603_br_underarmourgolf-promotion",camp:"bizboard-retarget",c1:126427,r1:991990,ro1:7.85,c7:942147,r7:5861019,ro7:6.22,c30:2766549,r30:13168688,ro30:4.76},
+  {ag:"male3070-sel_br_fahrenheit-promotion",camp:"bizboard-ua",c1:41593,r1:258900,ro1:6.22,c7:41593,r7:258900,ro7:6.22,c30:41593,r30:258900,ro30:6.22},
+  {ag:"male3564-2603_ct_golfgoods-promotion",camp:"bizboard-retarget",c1:56441,r1:467744,ro1:8.29,c7:120233,r7:734784,ro7:6.11,c30:849328,r30:3368598,ro30:3.97},
+  {ag:"male4070-sel_br_wolsey-promotion",camp:"display-retarget",c1:59113,r1:407613,ro1:6.9,c7:277351,r7:1686205,ro7:6.08,c30:277351,r30:1686205,ro30:6.08},
+  {ag:"male3570-sel_br_volvik-promotion",camp:"bizboard-retarget",c1:126184,r1:890503,ro1:7.06,c7:975955,r7:5804748,ro7:5.95,c30:4546808,r30:17763015,ro30:3.91},
+  {ag:"male3070-sel_ct_underwear-promotion",camp:"bizboard-retarget",c1:105483,r1:535363,ro1:5.08,c7:836874,r7:4921465,ro7:5.88,c30:6310080,r30:26592760,ro30:4.21},
+  {ag:"male3564-2604_br_challenger-promotion",camp:"bizboard-retarget",c1:80025,r1:458099,ro1:5.72,c7:125240,r7:718799,ro7:5.74,c30:125240,r30:718799,ro30:5.74},
+  {ag:"male3064-sel_br_pondpuma-promotion",camp:"display-retarget",c1:113260,r1:605069,ro1:5.34,c7:1517538,r7:8420335,ro7:5.55,c30:8245506,r30:37649642,ro30:4.57},
+  {ag:"male4070-sel_br_indian-promotion",camp:"bizboard-retarget",c1:199481,r1:1530486,ro1:7.67,c7:643046,r7:3563822,ro7:5.54,c30:3903448,r30:12161234,ro30:3.12},
+  {ag:"male4070-sel_br_wolsey-promotion",camp:"bizboard-retarget",c1:80456,r1:556527,ro1:6.92,c7:307307,r7:1665340,ro7:5.42,c30:307307,r30:1665340,ro30:5.42},
+  {ag:"male3070-sel_ct_golfbest-promotion",camp:"bizboard-retarget",c1:276265,r1:1696005,ro1:6.14,c7:2174971,r7:11652025,ro7:5.36,c30:5918850,r30:32210214,ro30:5.44},
+  {ag:"male3070-sel_br_pat-promotion",camp:"bizboard-retarget",c1:166864,r1:766931,ro1:4.6,c7:1163568,r7:6207114,ro7:5.33,c30:8702794,r30:33626698,ro30:3.86},
+  {ag:"male3064-2604_ct_aprilsuit-promotion",camp:"bizboard-retarget",c1:86006,r1:560616,ro1:6.52,c7:756743,r7:4034525,ro7:5.33,c30:756743,r30:4034525,ro30:5.33},
+  {ag:"male3064-sel_br_pondpuma-promotion",camp:"bizboard-retarget",c1:270828,r1:1494338,ro1:5.52,c7:2215994,r7:11680549,ro7:5.27,c30:10697151,r30:53100400,ro30:4.96},
+];
+
+const fmt=v=>v.toLocaleString('ko-KR');
+const fmtW=v=>v>0?'₩'+fmt(Math.round(v)):'-';
+const fmtR=v=>v!==null?v.toFixed(2):'-';
+function roasCls(v){if(v===null)return'';if(v>=5)return'roas-high';if(v>=3)return'roas-mid';return'roas-low';}
+
+// KPIs
+const kpiEl=document.getElementById('kpis');
+const totalC7=DATA.reduce((s,d)=>s+d.c7,0);
+const totalR7=DATA.reduce((s,d)=>s+d.r7,0);
+const avgRo7=DATA.filter(d=>d.ro7).reduce((s,d)=>s+d.ro7,0)/DATA.filter(d=>d.ro7).length;
+const above5=DATA.filter(d=>d.ro7>=5).length;
+const kpis=[
+  ['광고그룹 수',DATA.length+'개'],
+  ['총 광고비 (7일)',fmtW(totalC7)],
+  ['총 매출 (7일)',fmtW(totalR7)],
+  ['평균 ROAS (7일)',avgRo7.toFixed(2)],
+  ['ROAS 5이상',above5+'개 ('+Math.round(above5/DATA.length*100)+'%)'],
+];
+kpis.forEach(([l,v])=>{kpiEl.innerHTML+=`<div class="kpi"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div></div>`;});
+
+// Chart
+const labels=DATA.map(d=>d.ag.replace(/-promotion$/,'').slice(0,32));
+const dark={paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#fafafa',size:11},
+  margin:{t:40,b:140,l:50,r:20},xaxis:{gridcolor:'#30363d',tickangle:-40},yaxis:{gridcolor:'#30363d',title:'ROAS'}};
+
+Plotly.newPlot('chart-roas',[
+  {name:'1일 ROAS',x:labels,y:DATA.map(d=>d.ro1),type:'bar',marker:{color:'#FFD700'}},
+  {name:'7일 ROAS',x:labels,y:DATA.map(d=>d.ro7),type:'bar',marker:{color:'#FF6B00'}},
+  {name:'30일 ROAS',x:labels,y:DATA.map(d=>d.ro30),type:'bar',marker:{color:'#8B3A00'}},
+],{...dark,title:'ROAS 비교 — 상위 20개 광고그룹 (7일 기준)',barmode:'group',height:480,
+  legend:{orientation:'h',y:1.08,xanchor:'right',x:1},
+  shapes:[{type:'line',x0:-0.5,x1:19.5,y0:5,y1:5,line:{dash:'dash',color:'#2ea043',width:1}},
+          {type:'line',x0:-0.5,x1:19.5,y0:3,y1:3,line:{dash:'dash',color:'#f85149',width:1}}],
+  annotations:[{x:19.5,y:5,text:'ROAS 5',showarrow:false,font:{color:'#2ea043',size:10},xanchor:'right',yshift:10},
+               {x:19.5,y:3,text:'ROAS 3',showarrow:false,font:{color:'#f85149',size:10},xanchor:'right',yshift:10}]});
+
+// Table
+let html='<table><tr><th>광고그룹</th><th>캠페인</th><th>광고비(1일)</th><th>매출(1일)</th><th>ROAS(1일)</th><th>광고비(7일)</th><th>매출(7일)</th><th>ROAS(7일)</th><th>광고비(30일)</th><th>매출(30일)</th><th>ROAS(30일)</th></tr>';
+DATA.forEach(d=>{
+  html+=`<tr><td>${d.ag}</td><td>${d.camp}</td>`;
+  html+=`<td>${fmtW(d.c1)}</td><td>${fmtW(d.r1)}</td><td class="${roasCls(d.ro1)}">${fmtR(d.ro1)}</td>`;
+  html+=`<td>${fmtW(d.c7)}</td><td>${fmtW(d.r7)}</td><td class="${roasCls(d.ro7)}">${fmtR(d.ro7)}</td>`;
+  html+=`<td>${fmtW(d.c30)}</td><td>${fmtW(d.r30)}</td><td class="${roasCls(d.ro30)}">${fmtR(d.ro30)}</td></tr>`;
+});
+html+='</table>';
+document.getElementById('data-table').innerHTML=html;
+</script>
+</body>
+</html>
